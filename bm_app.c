@@ -1,48 +1,49 @@
 #include <stdint.h>
+#include "bm_app.h"
 
-static inline long sbi_call(long ext, long fid,
-			    long arg0, long arg1,
-			    long arg2, long arg3)
+#ifdef BM_S_MODE
+
+static inline void putchar(char ch)
 {
-	(void)arg1;
-
-	register long a0 asm("a0") = arg0;
-	register long a1 asm("a1") = 0;
-	register long a2 asm("a2") = arg2;
-	register long a3 asm("a3") = arg3;
-	register long a6 asm("a6") = fid;
-	register long a7 asm("a7") = ext;
+	register unsigned long a0 asm("a0") = (unsigned long)(uint8_t)ch;
+	register unsigned long a7 asm("a7") = SBI_EXT_CONSOLE_PUTCHAR;
 
 	asm volatile ("ecall"
-		      : "+r"(a0), "+r"(a1)
-		      : "r"(a2), "r"(a3), "r"(a6), "r"(a7)
+		      : "+r"(a0)
+		      : "r"(a7)
 		      : "memory");
-	return a0;
 }
 
-#define SBI_EXT_CONSOLE_PUTCHAR 0x01
+#else
 
-static void sbi_putc(char ch)
+/* for QEMU test only via UART MMIO when app is running in M-mode */
+
+static inline void putchar(char ch)
 {
-	sbi_call(SBI_EXT_CONSOLE_PUTCHAR, 0, ch, 0, 0, 0);
+	volatile uint8_t *uart = (volatile uint8_t *)UART0_BASE;
+
+	while (!(uart[UART_LSR] & UART_LSR_THRE))
+		;
+
+	uart[UART_THR] = (uint8_t)ch;
 }
+
+#endif
 
 static void print(const char *s)
 {
 	while (*s) {
-		sbi_putc(*s++);
+		if (*s == '\n')
+			putchar('\r');
+		putchar(*s++);
 	}
 }
 
-void _start(void)
+void main(void)
 {
-	print("\r\n======================================\r\n");
-	print(" Welcome to OpenSBI bare-metal app!\r\n");
-	print(" Running in its own payload \r\n");
-	print("======================================\r\n\r\n");
+	print(" \nWelcome to OpenSBI bare-metal app!\n");
 
 	while (1) {
-		asm volatile ("wfi");
+		__asm__ volatile ("wfi");
 	}
 }
-
