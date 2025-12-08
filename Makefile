@@ -1,23 +1,42 @@
-PROJECT      := bm-app
-
 CROSS_COMPILE ?= riscv64-unknown-linux-gnu-
 
 CC      := $(CROSS_COMPILE)gcc
-CFLAGS  := -Os -g -march=rv64gc -mabi=lp64d \
-           -mcmodel=medany \
+OBJDUMP := $(CROSS_COMPILE)objdump
+OBJCOPY := $(CROSS_COMPILE)objcopy
+READELF := $(CROSS_COMPILE)readelf
+CPP = $(CC) -E
+
+# bare-metal required flags when using a linux toolchain:
+# CFLAGS: -ffreestanding -nostdlib -fno-builtin -fno-pie -fno-stack-protector
+# LDFLAGS: -nostdlib -Tlink.ld -Wl,-no-pie
+CFLAGS  := -Os -g \
+           -march=rv64gc -mabi=lp64d -mcmodel=medany \
            -ffreestanding -nostdlib -fno-builtin \
+           -fno-pie  \
            -Wall -Wextra
-LDFLAGS := -nostdlib -Tlink.ld -Wl,-Map=$(PROJECT).map,--gc-sections
 
-all: $(PROJECT).elf
+LDFLAGS := -nostdlib -Tlink.ld \
+           -Wl,-Map=bm-app.map,--gc-sections \
+           -Wl,-no-pie
 
-$(PROJECT).elf: bm_app.o
-	$(CC) $(LDFLAGS) -o $@ $^
+OBJS := start.o bm_app.o
 
-bm_app.o: bm_app.c
+CPPFLAGS := $(if $(BM_S_MODE),-DBM_S_MODE,)
+CFLAGS += $(CPPFLAGS)
+
+all: bm-app.elf
+
+link.ld: link.ld.S
+	$(CPP) $(CPPFLAGS) -P -o link.ld link.ld.S
+
+bm-app.elf: $(OBJS) link.ld
+	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.o: %.S
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o $(PROJECT).elf $(PROJECT).map
-
-.PHONY: all clean
+	rm -f *.o bm-app.elf bm-app.map link.ld
