@@ -1,18 +1,27 @@
 # RISC-V Bare-Metal Application for QEMU
 
+## Overview
+
+This project implements a Bare-Metal application for testing SBI features.
+
+v0.1
+
+SBI ecall interface is implemented with public APIs supporting blow
+EXT ID and FID:
+
+- SBI_EXT_0_1_CONSOLE_PUTCHAR
+- SBI_EXT_BASE (GET_SPEC_VERSION, GET_IMP_ID, GET_IMP_VERSION)
+- SBI_EXT_TIME (SET_TIMER)
+
 ## Build & Run
 
-### App as M-mode
+The application is expected to run as a S-mode payload and get service from
+openSBI via ECALL extension.
+
+- Build the application
 
 ```
   make CROSS_COMPILE=<TOOLCHAIN_DIR>/bin/riscv64-linux-
-  qemu-system-riscv64 -M virt -cpu rv64,zkr=on -m 4096 -nographic -bios bm-app.elf
-```
-
-### App as S-mode
-
-```
-  make CROSS_COMPILE=<TOOLCHAIN_DIR>/bin/riscv64-linux- BM_S_MODE=1
 ```
 
 - Run with QEMU internal openSBI as M-mode
@@ -21,8 +30,81 @@
   qemu-system-riscv64 -M virt -cpu rv64,zkr=on -m 4096 -nographic -kernel bm-app.elf
 ```
 
-- Run with pre-built openSBI fw_jump as M-mode
+- Run with a pre-built openSBI fw_jump as M-mode
 
 ```
   qemu-system-riscv64 -M virt -cpu rv64,zkr=on -m 4096 -nographic -bios fw_jump.bin -kernel bm-app.elf
+```
+
+- Expected logs
+
+```
+OpenSBI v1.6
+   ____                    _____ ____ _____
+  / __ \                  / ____|  _ \_   _|
+ | |  | |_ __   ___ _ __ | (___ | |_) || |
+ | |  | | '_ \ / _ \ '_ \ \___ \|  _ < | |
+ | |__| | |_) |  __/ | | |____) | |_) || |_
+  \____/| .__/ \___|_| |_|_____/|____/_____|
+        | |
+        |_|
+
+Platform Name               : riscv-virtio,qemu
+Platform Features           : medeleg
+Platform HART Count         : 1
+Platform IPI Device         : aclint-mswi
+Platform Timer Device       : aclint-mtimer @ 10000000Hz
+Platform Console Device     : uart8250
+Platform HSM Device         : ---
+Platform PMU Device         : ---
+Platform Reboot Device      : syscon-reboot
+Platform Shutdown Device    : syscon-poweroff
+Platform Suspend Device     : ---
+Platform CPPC Device        : ---
+Firmware Base               : 0x80000000
+Firmware Size               : 317 KB
+Firmware RW Offset          : 0x40000
+Firmware RW Size            : 61 KB
+Firmware Heap Offset        : 0x46000
+Firmware Heap Size          : 37 KB (total), 2 KB (reserved), 11 KB (used), 23 KB (free)
+Firmware Scratch Size       : 4096 B (total), 1400 B (used), 2696 B (free)
+Runtime SBI Version         : 3.0
+Standard SBI Extensions     : time,rfnc,ipi,base,hsm,srst,pmu,dbcn,fwft,legacy,dbtr,sse
+Experimental SBI Extensions : none
+
+Domain0 Name                : root
+Domain0 Boot HART           : 0
+Domain0 HARTs               : 0*
+Domain0 Region00            : 0x0000000000100000-0x0000000000100fff M: (I,R,W) S/U: (R,W)
+Domain0 Region01            : 0x0000000010000000-0x0000000010000fff M: (I,R,W) S/U: (R,W)
+Domain0 Region02            : 0x0000000002000000-0x000000000200ffff M: (I,R,W) S/U: ()
+Domain0 Region03            : 0x0000000080040000-0x000000008004ffff M: (R,W) S/U: ()
+Domain0 Region04            : 0x0000000080000000-0x000000008003ffff M: (R,X) S/U: ()
+Domain0 Region05            : 0x000000000c400000-0x000000000c5fffff M: (I,R,W) S/U: (R,W)
+Domain0 Region06            : 0x000000000c000000-0x000000000c3fffff M: (I,R,W) S/U: (R,W)
+Domain0 Region07            : 0x0000000000000000-0xffffffffffffffff M: () S/U: (R,W,X)
+Domain0 Next Address        : 0x0000000080200000
+Domain0 Next Arg1           : 0x0000000082200000
+Domain0 Next Mode           : S-mode
+Domain0 SysReset            : yes
+Domain0 SysSuspend          : yes
+
+Boot HART ID                : 0
+Boot HART Domain            : root
+Boot HART Priv Version      : v1.12
+Boot HART Base ISA          : rv64imafdch
+Boot HART ISA Extensions    : sstc,zicntr,zihpm,zkr,zicboz,zicbom,sdtrig,svadu
+Boot HART PMP Count         : 16
+Boot HART PMP Granularity   : 2 bits
+Boot HART PMP Address Bits  : 54
+Boot HART MHPM Info         : 16 (0x0007fff8)
+Boot HART Debug Triggers    : 2 triggers
+Boot HART MIDELEG           : 0x0000000000001666
+Boot HART MEDELEG           : 0x0000000000f4b509
+
+Welcome to OpenSBI bare-metal app!
+SBI Spec Version: 3.0
+SBI Implementation: OpenSBI
+OpenSBI Version: 1.6
+Init timer successfully 10000000 ticks/s
 ```
