@@ -1,49 +1,49 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (c) 2025 RISCstar Solutions.
+ *
+ * Author: Raymond Mao <raymond.mao@riscstar.com>
+ */
+
 #include <stdint.h>
-#include "bm_app.h"
+#include "sbi.h"
+#include "timer.h"
 
-#ifdef BM_S_MODE
-
-static inline void putchar(char ch)
+static void print_opensbi_version(void)
 {
-	register unsigned long a0 asm("a0") = (unsigned long)(uint8_t)ch;
-	register unsigned long a7 asm("a7") = SBI_EXT_CONSOLE_PUTCHAR;
+	uint32_t spec = (uint32_t)sbi_get_spec_version();
+	uint32_t impl = (uint32_t)sbi_get_impl_id();
+	uint32_t iver = (uint32_t)sbi_get_impl_version();
 
-	asm volatile ("ecall"
-		      : "+r"(a0)
-		      : "r"(a7)
-		      : "memory");
-}
+	uint32_t spec_major = (spec >> 24) & 0xff;
+	uint32_t spec_minor = spec & 0x00ffffff;
 
-#else
+	uint32_t impl_major = (iver >> 16) & 0xffff;
+	uint32_t impl_minor = iver & 0xffff;
 
-/* for QEMU test only via UART MMIO when app is running in M-mode */
+	sbi_printf("SBI Spec Version: %u.%u\n", spec_major, spec_minor);
 
-static inline void putchar(char ch)
-{
-	volatile uint8_t *uart = (volatile uint8_t *)UART0_BASE;
+	if (impl == 1)
+		sbi_printf("SBI Implementation: OpenSBI\n");
+	else
+		sbi_printf("SBI Implementation ID: %u\n", impl);
 
-	while (!(uart[UART_LSR] & UART_LSR_THRE))
-		;
-
-	uart[UART_THR] = (uint8_t)ch;
-}
-
-#endif
-
-static void print(const char *s)
-{
-	while (*s) {
-		if (*s == '\n')
-			putchar('\r');
-		putchar(*s++);
-	}
+	sbi_printf("OpenSBI Version: %u.%u\n", impl_major, impl_minor);
 }
 
 void main(void)
 {
-	print(" \nWelcome to OpenSBI bare-metal app!\n");
+	uint64_t ticks_per_second = 10000000ULL;
+	long ret;
 
-	while (1) {
+	sbi_printf("\nWelcome to OpenSBI bare-metal app!\n");
+	print_opensbi_version();
+
+	ret = timer_init(ticks_per_second, 0);
+	if (!ret)
+		sbi_printf("Init timer successfully %d ticks/s",
+			   ticks_per_second);
+
+	while (1)
 		__asm__ volatile ("wfi");
-	}
 }

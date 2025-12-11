@@ -2,10 +2,10 @@ ENTRY(_start)
 
 SECTIONS
 {
-#ifdef BM_S_MODE
-  . = 0x80200000;
-#else
+#ifdef BM_M_MODE
   . = 0x80000000;
+#else
+  . = 0x80200000;
 #endif
 
   .text : ALIGN(4)

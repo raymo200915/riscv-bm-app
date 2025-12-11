@@ -12,17 +12,20 @@ CPP = $(CC) -E
 CFLAGS  := -Os -g \
            -march=rv64gc -mabi=lp64d -mcmodel=medany \
            -ffreestanding -nostdlib -fno-builtin \
-           -fno-pie  \
+           -fno-pie -fno-stack-protector \
            -Wall -Wextra
 
 LDFLAGS := -nostdlib -Tlink.ld \
            -Wl,-Map=bm-app.map,--gc-sections \
            -Wl,-no-pie
 
-OBJS := start.o bm_app.o
+OBJS := start.o bm_app.o sbi.o timer.o
 
-CPPFLAGS := $(if $(BM_S_MODE),-DBM_S_MODE,)
-CFLAGS += $(CPPFLAGS)
+#CPPFLAGS := $(if $(BM_M_MODE),-DBM_M_MODE,)
+#CPPFLAGS += $(if $(SBI_V01_SUPPORT),-DCONFIG_RISCV_SBI_V01,)
+#CFLAGS += $(CPPFLAGS)
+CFLAGS += -DCONFIG_RISCV_SBI_V01
+CFLAGS += -Iincludes
 
 all: bm-app.elf
 
